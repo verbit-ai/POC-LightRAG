@@ -45,7 +45,7 @@ ok "macOS detected ($ARCH)"
 # ---------- step 1: Homebrew --------------------------------------------------
 log "1/10  Homebrew"
 if ! command -v brew >/dev/null 2>&1; then
-    log "Installing Homebrew (you may be prompted for your password)…"
+    log "Installing Homebrew (you may be prompted for your password)..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
@@ -72,7 +72,7 @@ brew_install() {
     if brew list --formula "$pkg" >/dev/null 2>&1; then
         ok "$pkg already installed"
     else
-        log "Installing $pkg…"
+        log "Installing ${pkg}..."
         brew install "$pkg"
     fi
 }
@@ -105,7 +105,7 @@ fi
 # ---------- step 4: podman machine -------------------------------------------
 log "4/10  Podman VM"
 if ! podman machine list --format '{{.Name}}' | grep -q '.'; then
-    log "Initialising podman machine (${PODMAN_VM_CPUS} CPU / ${PODMAN_VM_MEM_MB} MB / ${PODMAN_VM_DISK_GB} GB)…"
+    log "Initialising podman machine (${PODMAN_VM_CPUS} CPU / ${PODMAN_VM_MEM_MB} MB / ${PODMAN_VM_DISK_GB} GB)..."
     podman machine init \
         --cpus "$PODMAN_VM_CPUS" \
         --memory "$PODMAN_VM_MEM_MB" \
@@ -115,24 +115,24 @@ fi
 if podman machine list --format '{{.Running}}' | grep -q true; then
     ok "Podman machine already running"
 else
-    log "Starting podman machine…"
+    log "Starting podman machine..."
     podman machine start
 fi
 
-log "Smoke-testing the VM with hello-world…"
+log "Smoke-testing the VM with hello-world..."
 podman run --rm hello-world >/dev/null
 ok "Podman VM is healthy"
 
 # ---------- step 5: clone LightRAG -------------------------------------------
 log "5/10  LightRAG repo"
 if [[ ! -d "${LIGHTRAG_DIR}/.git" ]]; then
-    log "Cloning $LIGHTRAG_REPO into $LIGHTRAG_DIR…"
+    log "Cloning ${LIGHTRAG_REPO} into ${LIGHTRAG_DIR}..."
     git clone "$LIGHTRAG_REPO" "$LIGHTRAG_DIR"
 fi
 (
     cd "$LIGHTRAG_DIR"
     if [[ "$(git rev-parse HEAD)" != "$LIGHTRAG_PINNED_SHA" ]]; then
-        log "Pinning LightRAG to ${LIGHTRAG_PINNED_SHA:0:10}…"
+        log "Pinning LightRAG to ${LIGHTRAG_PINNED_SHA:0:10}..."
         git fetch --quiet origin "$LIGHTRAG_PINNED_SHA" || true
         git checkout --quiet "$LIGHTRAG_PINNED_SHA"
     fi
@@ -143,7 +143,7 @@ ok "LightRAG at $(git -C "$LIGHTRAG_DIR" rev-parse --short HEAD)"
 log "6/10  Voyage-rerank patch"
 if [[ -f "$PATCH_FILE" ]]; then
     if git -C "$LIGHTRAG_DIR" apply --check "$PATCH_FILE" 2>/dev/null; then
-        log "Applying $PATCH_FILE…"
+        log "Applying ${PATCH_FILE}..."
         git -C "$LIGHTRAG_DIR" apply "$PATCH_FILE"
         ok "Patch applied"
     elif grep -q '"voyage"' "${LIGHTRAG_DIR}/lightrag/api/config.py"; then
@@ -219,7 +219,7 @@ Get keys here:
   Voyage : https://dash.voyageai.com/api-keys
 
 EOF
-    read -r -p "Press Enter once you've saved the .env file… " _
+    read -r -p "Press Enter once you've saved the .env file... " _
 fi
 ok "Proceeding with current .env"
 
