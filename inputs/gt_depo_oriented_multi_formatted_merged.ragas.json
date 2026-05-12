@@ -1,0 +1,119 @@
+{
+  "test_cases": [
+    {
+      "question": "What total storage capacity does the Archbold facility have for raw coal?",
+      "ground_truth": "1,600 tons. The facility has two aluminum, sheds with a capacity of 800 tons each",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "Why did Neil Miller stop speaking with Dwayne Jones of Fire Star Energy in March 2022?",
+      "ground_truth": "He did not want to be put in the middle of tensions between Wagner and Jones",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "What was the 'standing arrangement' regarding weekly coal deliveries between Niel Miller and Fire Star?",
+      "ground_truth": "Seven to ten 35-ton trucks per week",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "Who is 'Cotton'?",
+      "ground_truth": "Cotton is Dwayne Couch, a Fire Star employee who oversees coal operations and performs deliveries using his own truck. Neil Miller identified him as a key point of contact for the company when Dwayne was unavailable.",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "When did Neil Miller report he has no coal in his shed?",
+      "ground_truth": "Neil Miller reported that his building was \"empty now\" via a text dated November 24, 2021. Additionally, Miller recalled sending a communication in November 2021 stating, \"current state, I need coal,\" and Dwayne Jones acknowledged a communication \"on or about the Thanksgiving weekend\" indicating the shed no longer had any coal.",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "When did Tom Reed retire?",
+      "ground_truth": "Tom Reed retired in January 2021",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "Who owns Fire Star?",
+      "ground_truth": "Fire Star is owned 50 percent by Timothy (Tim) Jones and 50 percent by Dwayne Jones.",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "Find admissions of ACC witnesses that ACC was late in payments",
+      "ground_truth": "ACC witnesses admitted that they were late in paying virtually every invoice due to a weekly accounts payable schedule that naturally pushed payments beyond the 30-day term. They also acknowledged specific delays caused by an internal invoice exception process for fuel surcharges and the intentional withholding of payments in 2021 to cover costs related to coal quality issues.",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "Confirm Miller didn't know if there were quality issues at Chattanooga",
+      "ground_truth": "Yes, Miller testified that regarding Chattanooga, he did not know \"one way or the other,\" stating, \"I have no idea.\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "Confirm Miller didn't know if payments were withheld because of the lab results",
+      "ground_truth": "Neil Miller confirmed he did not know if payments were withheld as a result of the quality problem, testifying \"I don't\" when asked \"You don't know that?\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "When was the fuel surcharge introduced?",
+      "ground_truth": "According to Timothy Jones, the \"first invoice on which [Fire Star] imposed the fuel surcharge\" was dated February 20, 2022. However, Jones also confirmed sending an email regarding the surcharge on March 7, 2022, and multiple other witnesses described the surcharge as being imposed or added in March 2022.",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "When did Michael Wagner email Fire Star about missing coal deliveries?",
+      "ground_truth": "According to the citations, Michael Wagner sent an email on July 19, 2022, in which he stated, \"We unfortunately received no coal from you in June or month to date.\" There is also a reference to a June 10 email from Mr. Wagner regarding whether anyone responded to it.",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "What was the contracted price of coal per ton?",
+      "ground_truth": "According to the deposition of Timothy Jones, the fixed price between Fire Star and ACC was 118.50, which Jones clarified \"would be the delivered price trucked all the way to ACC.\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "When was Neil instructed to stop communicating with Fire Star?",
+      "ground_truth": "According to his deposition, Neil Miller was instructed to \"quit talking to Fire Star January 1st of 2021,\" at the time when Michael Wagner took over responsibilities.",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "Did Neil admit to knowing that 271 tons of coal delivered to Belvidere?",
+      "ground_truth": "Neil Miller testified that he did \"not know the number\" or \"about the tonnage\" regarding the 271 tons of coal, though he answered \"Yes\" when asked if he knew about the delivery generally. He clarified that he knew \"a lot of coal went to Archbold and got unloaded and reloaded and taken to Belvidere.\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "What price did Aliance charge for the coal?",
+      "ground_truth": "Alliance charged $110 for the coal. Witness Aric Wentz testified that this price was \"made FOB Pikeville, Kentucky\" and \"does not include the transportation cost to make it to the Archbold plant.\" Wentz further confirmed that invoices produced by Alliance reflect they \"were only charged $110\" for a \"further trial of 100 tons of Alliance coal.\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "When did test results came back high in sulfur?",
+      "ground_truth": "Test results came back high in sulfur on March 8, 2021. Neil Miller described this event as a \"sulfur spike on 3/8,\" while Timothy Jones confirmed that ACC reported high sulfur content to Fire Star in \"early March 2021.\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "What is the official job title of Tim Jones?",
+      "ground_truth": "Tim Jones holds the title of \"managing member,\" a position he confirmed in his deposition. He also described his position as \"a member,\" clarifying that this means he is a \"Part owner.\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "Did Dwayne intend to continue shipping coal to ACC in June 2022?",
+      "ground_truth": "Dwayne Jones testified that his intention was to continue to supply coal \"[a]s long as they were caught up on payments,\" but stated that \"they were not\" and \"never got caught up on payments.\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "What was the agreed payment schedule?",
+      "ground_truth": "The agreed payment terms identified in Exhibit 9 were \"30 days from receipt of invoice issued after dispatch of each Delivery.\" Witnesses Aric Wentz and Dwayne Jones confirmed the contract terms were \"30 days\" or \"net 30,\" though Jones asserted that net 30 meant \"payment from the invoice date, not after receiving an invoice.\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "To whom did Fire Star complain about delay in payments?",
+      "ground_truth": "Fire Star complained about payment delays to Mike Wagner, Aric Wentz, Neil Miller, Tom (the previous buyer), and Dorothy Dreher. Dwayne Jones testified that Fire Star \"complained about it all the time\" to Wagner, Wentz, Neil, and Tom (Citation 1). Timothy Jones stated he sent an email to Dorothy Dreher and spoke to Mike Wagner (Citation 2), and also noted that they spoke to Neil Miller about the payment issues (Citation 3, Citation 8). Additionally, Neil Miller testified that he believed Tim Jones would reach out to Rachel regarding payment problems (Citation 4).",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "Did Fire Star ordered coal from mines other than Chavies?",
+      "ground_truth": "Yes. Scott Warren confirmed that Fire Star ordered coal from B&W \"from mines other than Chavies\" when excess capacity existed. Additionally, Timothy Jones testified that Fire Star obtained coal from \"probably five\" other mines during the 2021-2022 timeframe, although it was of \"different quality.\" Dwayne Jones similarly stated they source from \"several\" companies, likely \"more than five.\"",
+      "project": "acc_vs_fire_eval"
+    },
+    {
+      "question": "When did Mike update Tim about resolving outstanding invoice issues?",
+      "ground_truth": "Mr. Wagner updated Tim on June 6, writing in an email, \"I believe those invoices have been resolved.\" Another reference to the email confirms the statement: \"We've also resolved our outstanding invoice issues as of 6/6/22.\"",
+      "project": "acc_vs_fire_eval"
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+diff --git a/lightrag/api/config.py b/lightrag/api/config.py
+index ff74a9e04..2ef76b727 100644
+--- a/lightrag/api/config.py
++++ b/lightrag/api/config.py
+@@ -267,7 +267,7 @@ def parse_args() -> argparse.Namespace:
+         "--rerank-binding",
+         type=str,
+         default=get_env_value("RERANK_BINDING", DEFAULT_RERANK_BINDING),
+-        choices=["null", "cohere", "jina", "aliyun"],
++        choices=["null", "cohere", "jina", "aliyun", "voyage"],
+         help=f"Rerank binding type (default: from env or {DEFAULT_RERANK_BINDING})",
+     )
+ 
+diff --git a/lightrag/api/lightrag_server.py b/lightrag/api/lightrag_server.py
+index 26ae0032b..d28682ebd 100644
+--- a/lightrag/api/lightrag_server.py
++++ b/lightrag/api/lightrag_server.py
+@@ -984,13 +984,14 @@ def create_app(args):
+     # Configure rerank function based on args.rerank_bindingparameter
+     rerank_model_func = None
+     if args.rerank_binding != "null":
+-        from lightrag.rerank import cohere_rerank, jina_rerank, ali_rerank
++        from lightrag.rerank import cohere_rerank, jina_rerank, ali_rerank, voyage_rerank
+ 
+         # Map rerank binding to corresponding function
+         rerank_functions = {
+             "cohere": cohere_rerank,
+             "jina": jina_rerank,
+             "aliyun": ali_rerank,
++            "voyage": voyage_rerank,
+         }
+ 
+         # Select the appropriate rerank function based on binding
+diff --git a/lightrag/evaluation/eval_rag_quality.py b/lightrag/evaluation/eval_rag_quality.py
+index 7b4150907..ecb0865d0 100644
+--- a/lightrag/evaluation/eval_rag_quality.py
++++ b/lightrag/evaluation/eval_rag_quality.py
+@@ -182,6 +182,9 @@ class RAGEvaluator:
+         embedding_kwargs = {
+             "model": eval_embedding_model,
+             "api_key": eval_embedding_api_key,
++            # Keep raw string inputs for non-OpenAI embedding endpoints (e.g., Voyage).
++            # Some OpenAI-compatible providers reject token-array input produced by tiktoken.
++            "tiktoken_enabled": False,
+         }
+ 
+         if eval_llm_base_url:
+diff --git a/lightrag/rerank.py b/lightrag/rerank.py
+index 12950fe61..8097a89b4 100644
+--- a/lightrag/rerank.py
++++ b/lightrag/rerank.py
+@@ -1,6 +1,7 @@
+ from __future__ import annotations
+ 
+ import os
++import asyncio
+ import aiohttp
+ from typing import Any, List, Dict, Optional, Tuple
+ from tenacity import (
+@@ -432,6 +433,73 @@ async def cohere_rerank(
+     )
+ 
+ 
++@retry(
++    stop=stop_after_attempt(3),
++    wait=wait_exponential(multiplier=1, min=4, max=10),
++    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)),
++)
++async def voyage_rerank(
++    query: str,
++    documents: List[str],
++    top_n: Optional[int] = None,
++    api_key: Optional[str] = None,
++    model: str = "rerank-2.5",
++    base_url: str = "https://api.voyageai.com/v1/rerank",
++    extra_body: Optional[Dict[str, Any]] = None,
++) -> List[Dict[str, Any]]:
++    """
++    Rerank documents using Voyage AI.
++
++    Voyage's endpoint is similar to Cohere's rerank API, but it expects `top_k`
++    and returns results under `data`, so it needs a small provider-specific
++    adapter instead of the generic Cohere binding.
++    """
++    if api_key is None:
++        api_key = os.getenv("VOYAGE_API_KEY") or os.getenv("RERANK_BINDING_API_KEY")
++
++    headers = {"Content-Type": "application/json"}
++    if api_key is not None:
++        headers["Authorization"] = f"Bearer {api_key}"
++
++    payload = {
++        "model": model,
++        "query": query,
++        "documents": documents,
++    }
++    if top_n is not None:
++        payload["top_k"] = top_n
++    if extra_body:
++        payload.update(extra_body)
++
++    async with aiohttp.ClientSession() as session:
++        async with session.post(base_url, headers=headers, json=payload) as response:
++            if response.status != 200:
++                error_text = await response.text()
++                logger.error(f"Voyage rerank API error {response.status}: {error_text}")
++                raise aiohttp.ClientResponseError(
++                    request_info=response.request_info,
++                    history=response.history,
++                    status=response.status,
++                    message=f"Voyage rerank API error: {error_text}",
++                )
++
++            response_json = await response.json()
++            results = response_json.get("data", [])
++            if not isinstance(results, list):
++                logger.warning(
++                    f"Expected Voyage 'data' to be list, got {type(results)}: {results}"
++                )
++                return []
++
++            return [
++                {
++                    "index": result["index"],
++                    "relevance_score": result["relevance_score"],
++                }
++                for result in results
++            ]
++
++
+ async def jina_rerank(
+     query: str,
+     documents: List[str],
