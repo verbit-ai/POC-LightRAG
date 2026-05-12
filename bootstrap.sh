@@ -175,16 +175,7 @@ RAG_STORAGE_DIR="${LIGHTRAG_DIR}/data/rag_storage"
 
 if [[ ! -f "$ENV_FILE" ]]; then
     cp "${LIGHTRAG_DIR}/env.example" "$ENV_FILE"
-    ok "Created LightRAG/.env from env.example"
-    cat <<EOF
-
-  TIP: If you have a saved LightRAG/.env from a previous run with API keys
-       already filled in, paste it now at:
-         ${ENV_FILE}
-       (overwrite the freshly-staged file). The script will detect the keys
-       and skip the API-keys prompt below.
-
-EOF
+    ok "Created LightRAG/.env from env.example (will be filled in at step 8)"
 else
     ok "LightRAG/.env already exists (left untouched)"
 fi
@@ -194,27 +185,14 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
 fi
 
 mkdir -p "$RAG_STORAGE_DIR"
-RAG_STORAGE_PREEXISTING=0
-if compgen -G "${RAG_STORAGE_DIR}/*" > /dev/null; then
-    RAG_STORAGE_PREEXISTING=1
+rag_storage_has_files() {
+    compgen -G "${RAG_STORAGE_DIR}/*" > /dev/null
+}
+if rag_storage_has_files; then
     RAG_FILE_COUNT="$(find "$RAG_STORAGE_DIR" -maxdepth 1 -type f | wc -l | tr -d ' ')"
     ok "Existing rag_storage snapshot detected (${RAG_FILE_COUNT} files) — server will load it on startup, no re-ingestion needed"
 else
-    cat <<EOF
-
-  TIP: rag_storage/ is empty. You have two options:
-    A) Paste a saved snapshot now at:
-         ${RAG_STORAGE_DIR}/
-       The server will load it on startup and skip ingestion.
-    B) Leave it empty and, after the server is up, drop PDFs into:
-         ${LIGHTRAG_DIR}/data/inputs/
-       The server will auto-ingest them (a few minutes per PDF).
-
-  If you paste a snapshot AFTER the container has started, restart it so
-  it re-reads from disk:
-    (cd ${LIGHTRAG_DIR} && podman-compose restart)
-
-EOF
+    ok "rag_storage is empty (will be addressed at step 8)"
 fi
 
 # Make sure .env is never accidentally committed if this directory becomes a git repo.
@@ -222,55 +200,98 @@ if [[ -d "${SCRIPT_DIR}/.git" ]] && ! grep -qxF 'LightRAG/.env' "${SCRIPT_DIR}/.
     echo 'LightRAG/.env' >> "${SCRIPT_DIR}/.gitignore"
 fi
 
-# ---------- step 8: API keys pause -------------------------------------------
-log "8/10  API keys"
-KEYS_OK=0
-if grep -Eq '^(LLM_BINDING_API_KEY|EMBEDDING_BINDING_API_KEY)=$' "$ENV_FILE" \
-    || grep -Eq '^(LLM_BINDING_API_KEY|EMBEDDING_BINDING_API_KEY)=.*your_.*key' "$ENV_FILE"; then
-    KEYS_OK=0
-else
-    # Heuristic: both keys present and non-empty
-    if grep -Eq '^LLM_BINDING_API_KEY=.+' "$ENV_FILE" \
-        && grep -Eq '^EMBEDDING_BINDING_API_KEY=.+' "$ENV_FILE"; then
-        KEYS_OK=1
+# ---------- step 8: API keys & rag_storage pause -----------------------------
+log "8/10  API keys & rag_storage"
+keys_ok() {
+    if grep -Eq '^(LLM_BINDING_API_KEY|EMBEDDING_BINDING_API_KEY)=$' "$ENV_FILE" \
+        || grep -Eq '^(LLM_BINDING_API_KEY|EMBEDDING_BINDING_API_KEY)=.*your_.*key' "$ENV_FILE"; then
+        return 1
     fi
-fi
+    grep -Eq '^LLM_BINDING_API_KEY=.+' "$ENV_FILE" \
+        && grep -Eq '^EMBEDDING_BINDING_API_KEY=.+' "$ENV_FILE"
+}
 
-if [[ "$KEYS_OK" -eq 0 ]]; then
-    cat <<EOF
+NEEDS_KEYS=0
+NEEDS_STORAGE=0
+keys_ok || NEEDS_KEYS=1
+rag_storage_has_files || NEEDS_STORAGE=1
 
-You now need real API keys in:
-  ${ENV_FILE}
+if [[ "$NEEDS_KEYS" -eq 1 || "$NEEDS_STORAGE" -eq 1 ]]; then
+    echo
+    echo "  Stop here and do the following before pressing Enter:"
+    echo
 
-If you have a saved .env from a previous run, paste it at the path above
-(overwriting the staged file) and press Enter to continue — no editing needed.
+    if [[ "$NEEDS_KEYS" -eq 1 ]]; then
+        cat <<EOF
+  ── 1. API keys ──────────────────────────────────────────────
+  Real API keys are required in:
+    ${ENV_FILE}
 
-Otherwise edit the file in place. Minimum required values
-(see RUN_LIGHTRAG_PODMAN.md step 8 for the full block):
-  LLM_BINDING=gemini
-  LLM_BINDING_API_KEY=<your Gemini AI Studio key>
-  LLM_MODEL=gemini-flash-latest
+  Two ways to provide them:
+    (a) Paste a saved .env from a previous run at the path above
+        (overwrite the staged file). The script auto-detects keys.
+    (b) Edit the file in place. Minimum required values:
+          LLM_BINDING=gemini
+          LLM_BINDING_API_KEY=<your Gemini AI Studio key>
+          LLM_MODEL=gemini-flash-latest
 
-  EMBEDDING_BINDING=openai
-  EMBEDDING_BINDING_HOST=https://api.voyageai.com/v1
-  EMBEDDING_BINDING_API_KEY=<your Voyage key>
-  VOYAGE_API_KEY=<your Voyage key>
-  EMBEDDING_MODEL=voyage-law-2
-  EMBEDDING_DIM=1024
+          EMBEDDING_BINDING=openai
+          EMBEDDING_BINDING_HOST=https://api.voyageai.com/v1
+          EMBEDDING_BINDING_API_KEY=<your Voyage key>
+          VOYAGE_API_KEY=<your Voyage key>
+          EMBEDDING_MODEL=voyage-law-2
+          EMBEDDING_DIM=1024
 
-  RERANK_BINDING=voyage
-  RERANK_MODEL=rerank-2.5
-  RERANK_BINDING_HOST=https://api.voyageai.com/v1/rerank
-  RERANK_BINDING_API_KEY=<your Voyage key>
+          RERANK_BINDING=voyage
+          RERANK_MODEL=rerank-2.5
+          RERANK_BINDING_HOST=https://api.voyageai.com/v1/rerank
+          RERANK_BINDING_API_KEY=<your Voyage key>
 
-Get keys here:
-  Gemini : https://aistudio.google.com/app/apikey
-  Voyage : https://dash.voyageai.com/api-keys
+  Get keys here:
+    Gemini : https://aistudio.google.com/app/apikey
+    Voyage : https://dash.voyageai.com/api-keys
 
 EOF
-    read -r -p "Press Enter once you've saved the .env file... " _
+    fi
+
+    if [[ "$NEEDS_STORAGE" -eq 1 ]]; then
+        cat <<EOF
+  ── 2. rag_storage (optional but recommended if you have one) ─
+  rag_storage/ is currently empty:
+    ${RAG_STORAGE_DIR}/
+
+  Two ways to populate it:
+    (a) Paste a saved snapshot at the path above NOW. The server
+        will load it on startup and skip ingestion entirely.
+    (b) Skip — leave it empty. After the server is up, drop PDFs
+        into ${LIGHTRAG_DIR}/data/inputs/ and the server will
+        auto-ingest them (a few minutes per PDF).
+
+  NOTE: if you paste a snapshot AFTER pressing Enter (i.e. after
+        the container has started), restart it so it re-reads
+        from disk:
+          (cd ${LIGHTRAG_DIR} && podman-compose restart)
+
+EOF
+    fi
+
+    read -r -p "Press Enter once you've finished the steps above (or to skip them)... " _
 fi
-ok "Proceeding with current .env"
+
+if keys_ok; then
+    ok "API keys present in .env"
+else
+    warn "API keys still look unset — the server will start but queries will fail until you fix .env"
+fi
+
+if rag_storage_has_files; then
+    RAG_FILE_COUNT="$(find "$RAG_STORAGE_DIR" -maxdepth 1 -type f | wc -l | tr -d ' ')"
+    RAG_STORAGE_PREEXISTING=1
+    ok "rag_storage has ${RAG_FILE_COUNT} files — will be loaded on server startup"
+else
+    RAG_STORAGE_PREEXISTING=0
+    ok "rag_storage is empty — server will start fresh, ingest by dropping PDFs into data/inputs/"
+fi
 
 # ---------- step 9: start the stack ------------------------------------------
 log "9/10  Building and starting the LightRAG container"
