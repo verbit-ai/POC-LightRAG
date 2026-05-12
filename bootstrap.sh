@@ -8,10 +8,21 @@
 #   4.  Initialises and starts the Podman VM.
 #   5.  Clones LightRAG (pinned commit) next to this script.
 #   6.  Applies patches/voyage_rerank.patch if it's present.
-#   7.  Stages .env and config.ini from upstream examples.
-#   8.  Waits for you to put real API keys in LightRAG/.env.
+#   7.  Stages .env and config.ini from upstream examples, and reports whether
+#       a pre-built rag_storage/ snapshot is already in place.
+#   8.  Waits for you to put real API keys in LightRAG/.env (or paste a saved
+#       .env from a previous run).
 #   9.  Builds and starts the LightRAG container with podman-compose.
 #  10.  Health-checks http://localhost:9621.
+#
+# Reusing artifacts from a previous run:
+#   - LightRAG/.env             — paste your saved file at step 7 to skip the
+#                                 API-keys prompt at step 8.
+#   - LightRAG/data/rag_storage — paste a saved snapshot at step 7 to skip
+#                                 ingestion. If you paste it AFTER the server
+#                                 is already running, restart the container so
+#                                 it re-reads from disk:
+#                                   (cd LightRAG && podman-compose restart)
 #
 # Safe to re-run. Anything already done is skipped.
 
@@ -156,20 +167,54 @@ else
     warn "If you need it, copy patches/voyage_rerank.patch from the PoC repo and re-run this script."
 fi
 
-# ---------- step 7: stage .env and config.ini --------------------------------
-log "7/10  .env and config.ini"
+# ---------- step 7: stage .env, config.ini, and rag_storage ------------------
+log "7/10  .env, config.ini, and rag_storage"
 ENV_FILE="${LIGHTRAG_DIR}/.env"
 CONFIG_FILE="${LIGHTRAG_DIR}/config.ini"
+RAG_STORAGE_DIR="${LIGHTRAG_DIR}/data/rag_storage"
 
 if [[ ! -f "$ENV_FILE" ]]; then
     cp "${LIGHTRAG_DIR}/env.example" "$ENV_FILE"
     ok "Created LightRAG/.env from env.example"
+    cat <<EOF
+
+  TIP: If you have a saved LightRAG/.env from a previous run with API keys
+       already filled in, paste it now at:
+         ${ENV_FILE}
+       (overwrite the freshly-staged file). The script will detect the keys
+       and skip the API-keys prompt below.
+
+EOF
 else
     ok "LightRAG/.env already exists (left untouched)"
 fi
 if [[ ! -f "$CONFIG_FILE" ]]; then
     cp "${LIGHTRAG_DIR}/config.ini.example" "$CONFIG_FILE"
     ok "Created LightRAG/config.ini from config.ini.example"
+fi
+
+mkdir -p "$RAG_STORAGE_DIR"
+RAG_STORAGE_PREEXISTING=0
+if compgen -G "${RAG_STORAGE_DIR}/*" > /dev/null; then
+    RAG_STORAGE_PREEXISTING=1
+    RAG_FILE_COUNT="$(find "$RAG_STORAGE_DIR" -maxdepth 1 -type f | wc -l | tr -d ' ')"
+    ok "Existing rag_storage snapshot detected (${RAG_FILE_COUNT} files) — server will load it on startup, no re-ingestion needed"
+else
+    cat <<EOF
+
+  TIP: rag_storage/ is empty. You have two options:
+    A) Paste a saved snapshot now at:
+         ${RAG_STORAGE_DIR}/
+       The server will load it on startup and skip ingestion.
+    B) Leave it empty and, after the server is up, drop PDFs into:
+         ${LIGHTRAG_DIR}/data/inputs/
+       The server will auto-ingest them (a few minutes per PDF).
+
+  If you paste a snapshot AFTER the container has started, restart it so
+  it re-reads from disk:
+    (cd ${LIGHTRAG_DIR} && podman-compose restart)
+
+EOF
 fi
 
 # Make sure .env is never accidentally committed if this directory becomes a git repo.
@@ -197,7 +242,11 @@ if [[ "$KEYS_OK" -eq 0 ]]; then
 You now need real API keys in:
   ${ENV_FILE}
 
-Minimum required values (see RUN_LIGHTRAG_PODMAN.md step 8 for the full block):
+If you have a saved .env from a previous run, paste it at the path above
+(overwriting the staged file) and press Enter to continue — no editing needed.
+
+Otherwise edit the file in place. Minimum required values
+(see RUN_LIGHTRAG_PODMAN.md step 8 for the full block):
   LLM_BINDING=gemini
   LLM_BINDING_API_KEY=<your Gemini AI Studio key>
   LLM_MODEL=gemini-flash-latest
@@ -246,6 +295,20 @@ for i in $(seq 1 $ATTEMPTS); do
     fi
 done
 
+if [[ "$RAG_STORAGE_PREEXISTING" -eq 1 ]]; then
+    NEXT_STEP_BLOCK="  Next step   : a rag_storage snapshot was already in place, so the
+                server is loaded with the existing index. Run the eval:
+                  python3.12 -m venv .venv && source .venv/bin/activate
+                  pip install -r requirements-eval.txt
+                  python run_eval.py"
+else
+    NEXT_STEP_BLOCK="  Next step   : either drop PDFs into LightRAG/data/inputs/ to ingest
+                (or upload via the WebUI), OR paste a saved rag_storage
+                snapshot into LightRAG/data/rag_storage/ and restart the
+                container:
+                  (cd LightRAG && podman-compose restart)"
+fi
+
 cat <<EOF
 
 ────────────────────────────────────────────────────────────
@@ -259,7 +322,6 @@ cat <<EOF
   Stop stack  : (cd LightRAG && podman-compose down)
   Stop VM     : podman machine stop
 
-  Next step   : drop PDFs into LightRAG/data/inputs/ to ingest,
-                or upload them via the WebUI.
+${NEXT_STEP_BLOCK}
 ────────────────────────────────────────────────────────────
 EOF
