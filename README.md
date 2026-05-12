@@ -10,10 +10,33 @@ Gemini as the LLM/judge.
 ```bash
 chmod +x bootstrap.sh
 ./bootstrap.sh                                          # installs everything, prompts for API keys
+```
 
+When `bootstrap.sh` reaches **step 8** it will pause and ask you to (1) put real
+API keys in `LightRAG/.env` and (2) optionally seed `LightRAG/data/rag_storage/`
+with a prebuilt index. Pick one of the two ingestion paths below before
+pressing Enter.
+
+**Path A — reuse the prebuilt snapshot shipped in this repo (fast, no
+ingestion).** The `rag_storage/` directory at the repo root is a ~81 MB
+prebuilt index of the ACC vs Fire corpus. Copy it into place during the step-8
+pause:
+
+```bash
+cp -R rag_storage/. LightRAG/data/rag_storage/
+```
+
+**Path B — ingest from scratch.** Skip the copy, press Enter, then after the
+container is up:
+
+```bash
 cp inputs/ACCvsFire/*.pdf LightRAG/data/inputs/         # auto-ingested by the server
 curl -s http://localhost:9621/documents/pipeline_status | jq .   # wait until all "processed"
+```
 
+Then in either path, run the evaluation:
+
+```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-eval.txt
@@ -38,15 +61,20 @@ Context Precision ≈ `0.56`, RAGAS avg ≈ `0.80`.
 | `requirements-eval.txt` | Pinned Python deps for `run_eval.py` (`ragas`, `langchain*`, `openai`, `python-dotenv`, `tiktoken`). Kept separate from LightRAG's own deps because the eval runs in its own venv at the project root. |
 | `inputs/ACCvsFire/*.pdf` | The source corpus — 5 deposition PDFs (~5.8 MB). Copied into `LightRAG/data/inputs/` after bootstrap, where the server auto-ingests them into the vector DB + knowledge graph. Replace with your own docs to evaluate on a different corpus. |
 | `inputs/gt_depo_oriented_multi_formatted_merged.ragas.json` | The 23-case ground-truth test set. `run_eval.py` reads this directly. Schema: `{"test_cases": [{"question": "...", "ground_truth": "...", "project": "..."}, …]}`. Replace with your own questions to evaluate a different task. |
+| `rag_storage/` | Optional prebuilt LightRAG index of the ACC vs Fire corpus (~81 MB across 12 files: `vdb_*.json`, `graph_chunk_entity_relation.graphml`, `kv_store_*.json`). Copy into `LightRAG/data/rag_storage/` during the step-8 pause to skip ingestion entirely. Generated against `voyage-law-2` (dim 1024) — only valid for that exact embedding model. |
+| `.gitignore` | Keeps `LightRAG/`, `.env`, `.venv/`, `__pycache__/`, `.DS_Store`, and IDE configs out of the repo. |
 
 ### Reference docs
 
 | File | Why |
 | --- | --- |
 | `README.md` | This file — the one-page summary. |
-| `RUN_LIGHTRAG_PODMAN.md` | 14-step iterative walkthrough of what `bootstrap.sh` does, with verification gates and a troubleshooting cheat sheet. Read this when something breaks. |
-| `SETUP.md` | End-to-end setup guide including the eval pipeline (`run_eval.py`, RAGAS config, expected metrics). Reference for the bigger picture. |
-| `PLAN.md` | Historical record of how this PoC evolved, decisions made, and the next-iteration plan. Not needed to run anything. |
+
+> The earlier drafts of this PoC also shipped `RUN_LIGHTRAG_PODMAN.md` (14-step
+> Podman walkthrough), `SETUP.md` (end-to-end setup guide), and `PLAN.md`
+> (decisions / history). They live in the original `rag-poc/` workspace and
+> have **not been migrated to this repository yet**. If you need them, ask
+> the repo owner.
 
 ### Auto-generated (don't commit, don't bring to a new machine)
 
@@ -54,7 +82,7 @@ Context Precision ≈ `0.56`, RAGAS avg ≈ `0.80`.
 | --- | --- |
 | `LightRAG/` | `bootstrap.sh` clones HKUDS/LightRAG here and applies the patch. ~80 MB after first ingest. |
 | `LightRAG/.env`, `LightRAG/config.ini` | `bootstrap.sh` copies from `env.example` / `config.ini.example`. **Holds API keys — never commit.** |
-| `LightRAG/data/rag_storage/` | LightRAG server writes the vector DB, graph store, and chunk index here during ingestion. |
+| `LightRAG/data/rag_storage/` | Where the server actually reads/writes its index. Either populated by ingestion, or seeded from the top-level `rag_storage/` snapshot — see Quickstart Path A. Don't confuse with the committed `rag_storage/` at the repo root. |
 | `inputs/ragas_results/` | `run_eval.py` writes `ragas_<timestamp>.{json,csv}` here on every run. |
 | `.venv/` | Your local Python venv for the eval. |
 
@@ -79,23 +107,29 @@ to set in `LightRAG/.env`. Do not commit `.env`.
 ```
 .
 ├── README.md                            ← you are here
-├── RUN_LIGHTRAG_PODMAN.md               ← step-by-step Podman guide
-├── SETUP.md                             ← full PoC setup guide
-├── PLAN.md                              ← decisions / history
+├── .gitignore                           ← keeps LightRAG/, .env, .venv out of git
 ├── bootstrap.sh                         ← one-shot installer
 ├── patches/
 │   └── voyage_rerank.patch              ← adds Voyage rerank to LightRAG
 ├── run_eval.py                          ← RAGAS harness
 ├── requirements-eval.txt                ← eval Python deps
+├── rag_storage/                         ← committed prebuilt LightRAG index
+│   ├── vdb_*.json                          (~81 MB total; copy into
+│   ├── graph_chunk_entity_relation.graphml  LightRAG/data/rag_storage/
+│   └── kv_store_*.json                      during the step-8 pause)
 ├── inputs/
-│   ├── ACCvsFire/*.pdf                  ← source corpus
+│   ├── ACCvsFire/*.pdf                  ← source corpus (~7.8 MB, 5 PDFs)
 │   ├── gt_depo_oriented_multi_formatted_merged.ragas.json   ← test set
 │   └── ragas_results/                   ← (generated) eval outputs
 ├── LightRAG/                            ← (generated) cloned + patched upstream
 │   ├── .env                             ← (generated) holds API keys, gitignored
+│   ├── config.ini                       ← (generated) staged from upstream example
 │   └── data/
-│       ├── inputs/                      ← drop docs here to ingest
-│       └── rag_storage/                 ← vector DB + graph
+│       ├── inputs/                      ← drop docs here to ingest (Path B)
+│       └── rag_storage/                 ← (generated) vector DB + graph the
+│                                          server actually reads from; either
+│                                          ingested fresh, or seeded from the
+│                                          top-level rag_storage/ snapshot
 └── .venv/                               ← (generated) eval venv
 ```
 
@@ -129,7 +163,13 @@ cp inputs/ACCvsFire/*.pdf LightRAG/data/inputs/
 - **Embedding model is locked once you ingest.** Don't change `EMBEDDING_MODEL`
   or `EMBEDDING_DIM` in `.env` after the first document is processed —
   doing so will corrupt the vector store. Wipe `LightRAG/data/rag_storage/`
-  and re-ingest if you need to switch.
+  and re-ingest if you need to switch. The shipped `rag_storage/` snapshot
+  was built with `voyage-law-2` (dim 1024); pair it with matching `.env`
+  values or it won't read.
+- **Restart after seeding `rag_storage/`.** If you copy the snapshot into
+  `LightRAG/data/rag_storage/` *after* the container is already up, the
+  server is still holding its empty boot-time state in memory. Restart it:
+  `(cd LightRAG && podman-compose restart)`.
 - **Pinned LightRAG SHA.** `bootstrap.sh` checks out commit `6c85f26d2`
   because that's what `patches/voyage_rerank.patch` was generated against.
   If you bump the SHA, regenerate the patch (`git -C LightRAG diff HEAD >
